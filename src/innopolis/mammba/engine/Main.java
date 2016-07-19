@@ -3,8 +3,10 @@ package innopolis.mammba.engine;
 import innopolis.mammba.engine.errors.GameFlowError;
 import innopolis.mammba.engine.game.Game;
 import innopolis.mammba.engine.player.Player;
+import innopolis.mammba.engine.player.PlayerAction;
 
 import java.util.LinkedList;
+import java.util.List;
 
 public class Main {
 
@@ -28,18 +30,35 @@ public class Main {
 
         Game game = new Game();
         Player player1 = game.addUser(user1);
-        Player player2 = game.addUser(user1);
-        Player player3 = game.addUser(user1);
+        Player player2 = game.addUser(user2);
+        Player player3 = game.addUser(user3);
 
         game.start();
 
         player1.fold();
+        player2.pass();
+        player3.pass();
+
 
         player2.pass();
+        player3.pass();
 
 
+        player2.raise(1);
+        player3.call();
+
+        player2.fold();
 
 
+        try{
+            List<PlayerAction> list = player3.getActions();
+            player3.pass();
+        }catch (GameFlowError a){
+            System.out.println(a.toString());
+        }
+
+        /*player2.raise(22);
+        player3.call();*/
 
         System.out.println("dsd");
 

@@ -6,5 +6,12 @@ package innopolis.mammba.engine.errors;
  */
 
 public enum GameFlowErrorType{
-    incorrectAction, actionIsNotAllowed, noEnoughMoney, notYourTurn, accessForbidden
+    incorrectAction,
+    actionIsNotAllowed,
+    noEnoughMoney,
+    notYourTurn,
+    accessForbidden,
+    incorrectStakeAmountForCallAction,
+    noPlayersFoundToPlayInRound,
+    gameFinished
 }

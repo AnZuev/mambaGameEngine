@@ -13,4 +13,14 @@ public class User {
         surname = nSurname;
         balance = nBalance;
     }
+
+
+    public int getBalance(){
+        return balance;
+    }
+
+    public void reduceBalance(int amount){
+        balance -= amount;
+    }
+
 }

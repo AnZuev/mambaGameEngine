@@ -13,5 +13,8 @@ public class GameFlowError extends Error{
         type = nType;
         message = nMessage;
     }
+    public String toString(){
+        return "GameFlowError: " + type.toString() + " ; Message: " + message + ".";
+    }
 }
 

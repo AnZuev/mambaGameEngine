@@ -21,6 +21,8 @@ class Round {
     private int _secret;
     private int stakeAmount = 0;
     private int movesCounter = 0;
+    private int activePlayersCounter;
+
 
 
     Round(List<Player> nPlayers, Game nGame, int secret){
@@ -29,14 +31,20 @@ class Round {
         roundState = RoundState.waitToMove;
         _secret = secret;
         initStakes();
-        nPlayers.get(0).changeStateToWaitToMove(secret);
-        currentPlayer = nPlayers.get(0);
+        chooseFirstPlayerToMove();
+        activePlayersCounter = getActivePlayers().size();
     }
 
-    void call(Player player, int amount){
-        changeStakeAmount(player, amount);
-        moveTurnToNextPlayer(player);
-        movesCounter++;
+    void call(Player player){
+        int needToStake = stakeAmount - getStakeByPlayer(player).getAmount();
+        if(player.getUser().getBalance() > needToStake){
+            player.getUser().reduceBalance(needToStake);
+            changeStakeAmount(player, needToStake);
+            movesCounter++;
+            moveTurnToNextPlayer(player);
+        }else{
+            throw new GameFlowError(GameFlowErrorType.incorrectStakeAmountForCallAction, "Incorrect stake amount");
+        }
     }
 
     void pass(Player player){
@@ -44,18 +52,20 @@ class Round {
             movesCounter++;
             moveTurnToNextPlayer(player);
         }else{
-            throw new GameFlowError(GameFlowErrorType.incorrectAction, "Can't pass when player hasn't eniugh stakes");
+            throw new GameFlowError(GameFlowErrorType.incorrectAction, "Can't pass when player hasn't enough stakes");
         }
     }
 
     void raise(Player player, int amount){
         stakeAmount += amount;
         changeStakeAmount(player, amount);
+        movesCounter++;
         moveTurnToNextPlayer(player);
     }
 
     void fold (Player player){
         movesCounter++;
+        player.changeStateToFolded(_secret);
         moveTurnToNextPlayer(player);
     }
 
@@ -65,7 +75,7 @@ class Round {
         }
     }
 
-    private RoundStake getStakeByPlayer(Player nPlayer){
+    RoundStake getStakeByPlayer(Player nPlayer){
         for(RoundStake stake : stakes){
             if(stake.getPlayer() == nPlayer){
                 return stake;
@@ -79,32 +89,42 @@ class Round {
         stake.up(adds);
     }
 
-    private void moveTurnToNextPlayer(Player currentPlayer){
+    private void moveTurnToNextPlayer(Player oldCurrentPlayer){
         if(isRoundFinished()){
             roundState = RoundState.finished;
         }else{
             boolean flag = false;
-            for(Player player : players){
+            for(int i = 0; i < players.size(); i++){
                 if(flag){
-                    if( (player.getState() == PlayerState.active) || (player.getState() == PlayerState.allIn)){
-                        currentPlayer = player;
-                        player.changeStateToWaitToMove(_secret);
+                    if( (players.get(i).getState() == PlayerState.active) || (players.get(i).getState() == PlayerState.allIn)){
+                        currentPlayer = players.get(i);
+                        currentPlayer.changeStateToWaitToMove(_secret);
                         break;
                     }
-                }else if(player.equals(currentPlayer)){
+                }else if(players.get(i).equals(oldCurrentPlayer)){
                     flag = true;
                 }
-
+                if(i == (players.size() - 1)) i = 0;
             }
         }
     }
 
     private boolean isRoundFinished(){
-        if(movesCounter < players.size()){
+        int counter = 0;
+        for(Player player : players){
+            if(player.getState() != PlayerState.folded){
+                counter++;
+            }
+        }
+        if(counter < 2){
+            return true;
+        }
+
+        if(movesCounter < activePlayersCounter){
             return false;
         }
         for(RoundStake stake : stakes){
-            if(stake.getAmount() != stakeAmount){
+            if((stake.getPlayer().getState() == PlayerState.active) && (stake.getAmount() != stakeAmount)){
                 return false;
             }
         }
@@ -113,5 +133,42 @@ class Round {
 
     public Player getCurrentPlayer() {
         return currentPlayer;
+    }
+
+    public RoundState getRoundState() {
+        return roundState;
+    }
+
+    public int getAllStakes(){
+        int all = 0;
+        for(RoundStake stake : stakes){
+            all += stake.getAmount();
+        }
+        return all;
+    }
+
+    private void chooseFirstPlayerToMove(){
+        for(Player player : players){
+            if(player.getState() != PlayerState.folded){
+                currentPlayer = player;
+                player.changeStateToWaitToMove(_secret);
+                return;
+            }
+        }
+        throw new GameFlowError(GameFlowErrorType.noPlayersFoundToPlayInRound, "No non-folded players left");
+    }
+
+    private LinkedList<Player> getActivePlayers(){
+        LinkedList<Player> activePlayers = new LinkedList<>();
+        for(Player player : players){
+            if(player.getState() != PlayerState.folded){
+                activePlayers.push(player);
+            }
+        }
+        return activePlayers;
+    }
+
+    int getStakeAmount(){
+        return stakeAmount;
     }
 }

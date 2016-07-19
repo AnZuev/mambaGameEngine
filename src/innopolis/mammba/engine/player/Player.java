@@ -5,6 +5,7 @@ import innopolis.mammba.engine.errors.*;
 
 import innopolis.mammba.engine.cards.Card;
 import innopolis.mammba.engine.game.Game;
+import innopolis.mammba.engine.game.GameState;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -22,10 +23,13 @@ public class Player {
     private Game game;
 
     private static int idCounter = 0;
-    //    Game game;
+
 
     List<Card> cards = new LinkedList<>();
 
+    public User getUser(){
+        return user;
+    }
 
     public Player(User nUser, int secret, Game nGame){
         user = nUser;
@@ -39,36 +43,59 @@ public class Player {
         return id;
     }
 
-    public void call(int stake){
+    public void call(){
+        if(isGameDied()){
+            throw new GameFlowError(GameFlowErrorType.gameFinished, "Game has finished");
+        }
         checkMoveState();
-        //TODO: check if user balance enough
-
-
+        state = PlayerState.active;
+        game.call(id);
     };
 
     public void pass(){
+        if(isGameDied()){
+            throw new GameFlowError(GameFlowErrorType.gameFinished, "Game has finished");
+        }
         checkMoveState();
         game.pass(id);
         state = PlayerState.active;
     }
 
     public void raise(int stake){
+        if(isGameDied()){
+            throw new GameFlowError(GameFlowErrorType.gameFinished, "Game has finished");
+        }
         checkMoveState();
+        if(stake > user.getBalance()){
+            throw new GameFlowError(GameFlowErrorType.noEnoughMoney, "Not enough money");
+        }
+        game.raise(id, stake);
         //TODO: check if user balance enough
         // TODO: raise in game
         state = PlayerState.active;
 
     }
+
     public void fold(){
+        if(isGameDied()){
+            throw new GameFlowError(GameFlowErrorType.gameFinished, "Game has finished");
+        }
         checkMoveState();
         game.fold(id);
-        state = PlayerState.folded;
+//        state = PlayerState.folded;
 
     }
 
     public void changeStateToWaitToMove(int secret){
         if(secret == _secret){
             state = PlayerState.waitForMove;
+        }else{
+            throw new Error("Invalid key");
+        }
+    }
+    public void changeStateToFolded(int secret){
+        if(secret == _secret){
+            state = PlayerState.folded;
         }else{
             throw new Error("Invalid key");
         }
@@ -86,16 +113,38 @@ public class Player {
         return (PlayerState.waitForMove == state);
     }
 
-    private void changeStateToActive(){
-        state = PlayerState.active;
-    }
-
-    void changeStateToWaitForMove(){
-        state = PlayerState.waitForMove;
-    }
-
     public PlayerState getState(){
         return state;
     }
+
+    public void setCards(Card card1, Card card2, int secret){
+        if(secret == _secret){
+            cards.add(card1);
+            cards.add(card2);
+        }else{
+            throw new Error("Invalid key");
+        }
+    }
+
+    private boolean isGameDied(){
+        return (game.getState() == GameState.finished);
+    }
+
+    public List<Card> getCards(){
+        return cards;
+    }
+
+    public List<PlayerAction> getActions(){
+        if(isAllowedToMove()){
+            LinkedList<PlayerAction> actions = new LinkedList<>();
+            return game.getActionsByPlayer(this, _secret);
+        }
+        return null;
+    }
+
+
+
 }
+
+
 
